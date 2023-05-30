@@ -1,4 +1,4 @@
-package uk.ac.cam.cares.jps.agent.Hawker;
+package uk.ac.cam.cares.jps.agent.HawkerCentre;
 
 
 import org.json.JSONObject;
