@@ -40,7 +40,7 @@ public class APIQueryBuilder
      * Namespaces for ontologies
      */
 
-    public static final String OntoHawker = "https://www.theworldavatar.com/kg/ontohawker/";
+    public static final String OntoHawker = "https://www.theworldavatar.com/kg/ontohawkercentre/";
     public static final String RDFS_NS = "http://www.w3.org/2000/01/rdf-schema#";
 
     
@@ -50,7 +50,6 @@ public class APIQueryBuilder
      */ 
 
     private static final Prefix PREFIX_ONTOHAWKER = SparqlBuilder.prefix("ontoHawker", iri(OntoHawker));
-    public static final String generatedIRIPrefix = TimeSeriesSparql.TIMESERIES_NAMESPACE + "Hawker";
     private static final Prefix PREFIX_RDFS = SparqlBuilder.prefix("rdfs", iri(RDFS_NS));
 
     
@@ -239,7 +238,8 @@ public class APIQueryBuilder
                     JSONObject currentStall = jsArr.getJSONObject(i);
                     String current = currentStall.getString("premises_address");
 
-                    if(FuzzySearch.tokenSetRatio(current.split("Stall")[0].toLowerCase(),hawkerName.toLowerCase())>99)
+                    if (hawkerName.contains("/")) {
+                        if(FuzzySearch.tokenSetRatio(current.split("Stall")[0].replace(" ST ", " STREET ").replace(" DR ", " DRIVE ").replace(" LOR ", " LORONG ").toLowerCase(),hawkerName.toLowerCase())>87)
                     {
                         count++;
                         String score = currentStall.getString("grade");
@@ -251,7 +251,158 @@ public class APIQueryBuilder
                         totalScore += 70;
                     
 
-                        Iri stallRes=null;
+                        String stallRes=null;
+                        Variable stallIRI = SparqlBuilder.var("stallIRI");
+                        SelectQuery q1 = Queries.SELECT();
+
+                        int stallID = currentStall.getInt("_id");
+                        TriplePattern qp1 = stallIRI.isA(Stall).andHas(hasID,stallID);
+                        q1.prefix(PREFIX_ONTOHAWKER).select(stallIRI).where(qp1);
+                        kbClient.setQuery(q1.getQueryString());
+
+                        try
+                        {
+                            JSONArray queryResult1 = kbClient.executeQuery();
+                            if(!queryResult1.isEmpty())
+                            {
+                                stallRes = kbClient.executeQuery().getJSONObject(0).getString("stallIRI");
+                            }
+                            else
+                            {
+                                stallRes = OntoHawker + "stall_" + stallID + "_" + UUID.randomUUID();
+                            }
+                        }
+                        catch(Exception e)
+                        {
+                            throw new JPSRuntimeException("Unable to execute query: " + q1.getQueryString());
+                        }
+                        TriplePattern patternUpdate = iri(stallRes).isA(Stall);
+                        InsertDataQuery insertUpdate1 = Queries.INSERT_DATA(patternUpdate);
+                        insertUpdate1.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertUpdate1.getQueryString());
+
+                        //TriplePattern to instantiate this stall as part of the current HawkerCentre
+
+                        TriplePattern patternStall = iri(result).has(hasStall,iri(stallRes));
+                        InsertDataQuery insertStall = Queries.INSERT_DATA(patternStall);
+                        insertStall.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertStall.getQueryString());
+
+                        String licName = currentStall.getString("licensee_name");
+                        String licNo = currentStall.getString("licence_number");
+                        String grade = currentStall.getString("grade");
+                        String stallAddress = currentStall.getString("premises_address");
+
+                        TriplePattern patternLicName = iri(stallRes).has(hasLicenseeName,licName);
+                        InsertDataQuery insertLicName = Queries.INSERT_DATA(patternLicName);
+                        insertLicName.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertLicName.getQueryString());
+
+                        TriplePattern patternLicNo = iri(stallRes).has(hasLicenseNumber,licNo);
+                        InsertDataQuery insertLicNo = Queries.INSERT_DATA(patternLicNo);
+                        insertLicNo.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertLicNo.getQueryString());
+
+                        TriplePattern patterngrade = iri(stallRes).has(hasStallGrading,grade);
+                        InsertDataQuery insertGrade = Queries.INSERT_DATA(patterngrade);
+                        insertGrade.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertGrade.getQueryString());
+
+                        TriplePattern patternAddress = iri(stallRes).has(hasStallAddress,stallAddress);
+                        InsertDataQuery insertAddress = Queries.INSERT_DATA(patternAddress);
+                        insertAddress.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertAddress.getQueryString());
+
+
+                    }
+                    } else if (hawkerName.contains(" & ")) {
+                        if(FuzzySearch.tokenSetRatio(current.split("Stall")[0].replace(" ST ", " STREET ").replace(" DR ", " DRIVE ").replace(" LOR ", " LORONG ").toLowerCase(),hawkerName.toLowerCase())>90)
+                    {
+                        count++;
+                        String score = currentStall.getString("grade");
+                        if(score == "A")
+                        totalScore += 90;
+                        else if(score == "B")
+                        totalScore += 80;
+                        else
+                        totalScore += 70;
+                    
+
+                        String stallRes=null;
+                        Variable stallIRI = SparqlBuilder.var("stallIRI");
+                        SelectQuery q1 = Queries.SELECT();
+
+                        int stallID = currentStall.getInt("_id");
+                        TriplePattern qp1 = stallIRI.isA(Stall).andHas(hasID,stallID);
+                        q1.prefix(PREFIX_ONTOHAWKER).select(stallIRI).where(qp1);
+                        kbClient.setQuery(q1.getQueryString());
+
+                        try
+                        {
+                            JSONArray queryResult1 = kbClient.executeQuery();
+                            if(!queryResult1.isEmpty())
+                            {
+                                stallRes = kbClient.executeQuery().getJSONObject(0).getString("stallIRI");
+                            }
+                            else
+                            {
+                                stallRes = OntoHawker + "stall_" + stallID + "_" + UUID.randomUUID();
+                            }
+                        }
+                        catch(Exception e)
+                        {
+                            throw new JPSRuntimeException("Unable to execute query: " + q1.getQueryString());
+                        }
+                        TriplePattern patternUpdate = iri(stallRes).isA(Stall);
+                        InsertDataQuery insertUpdate1 = Queries.INSERT_DATA(patternUpdate);
+                        insertUpdate1.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertUpdate1.getQueryString());
+
+                        //TriplePattern to instantiate this stall as part of the current HawkerCentre
+
+                        TriplePattern patternStall = iri(result).has(hasStall,iri(stallRes));
+                        InsertDataQuery insertStall = Queries.INSERT_DATA(patternStall);
+                        insertStall.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertStall.getQueryString());
+
+                        String licName = currentStall.getString("licensee_name");
+                        String licNo = currentStall.getString("licence_number");
+                        String grade = currentStall.getString("grade");
+                        String stallAddress = currentStall.getString("premises_address");
+
+                        TriplePattern patternLicName = iri(stallRes).has(hasLicenseeName,licName);
+                        InsertDataQuery insertLicName = Queries.INSERT_DATA(patternLicName);
+                        insertLicName.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertLicName.getQueryString());
+
+                        TriplePattern patternLicNo = iri(stallRes).has(hasLicenseNumber,licNo);
+                        InsertDataQuery insertLicNo = Queries.INSERT_DATA(patternLicNo);
+                        insertLicNo.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertLicNo.getQueryString());
+
+                        TriplePattern patterngrade = iri(stallRes).has(hasStallGrading,grade);
+                        InsertDataQuery insertGrade = Queries.INSERT_DATA(patterngrade);
+                        insertGrade.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertGrade.getQueryString());
+
+                        TriplePattern patternAddress = iri(stallRes).has(hasStallAddress,stallAddress);
+                        InsertDataQuery insertAddress = Queries.INSERT_DATA(patternAddress);
+                        insertAddress.prefix(PREFIX_ONTOHAWKER);
+                        kbClient.executeUpdate(insertAddress.getQueryString());
+                    }
+                } else if(FuzzySearch.tokenSetRatio(current.split("Stall")[0].replace(" ST ", " STREET ").replace(" DR ", " DRIVE ").replace(" LOR ", " LORONG ").toLowerCase(),hawkerName.toLowerCase())>99)
+                    {
+                        count++;
+                        String score = currentStall.getString("grade");
+                        if(score == "A")
+                        totalScore += 90;
+                        else if(score == "B")
+                        totalScore += 80;
+                        else
+                        totalScore += 70;
+                    
+
+                        String stallRes=null;
                         Variable stallIRI = SparqlBuilder.var("stallIRI");
                         SelectQuery q1 = Queries.SELECT();
 
